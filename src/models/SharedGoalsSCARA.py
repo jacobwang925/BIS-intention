@@ -139,11 +139,32 @@ class SharedGoalsSCARA(SCARA):
             total_goals_achieved = self.partner.goal_achieved + self.goal_achieved
             self.possible_goals[:,self.goal_idx] = self.goals[:,total_goals_achieved+3]
 
-            ## TODO: add some rule based goal seclection process
+            ## TODO: add some rule based goal seclection process. Done
             # compute closest goal
+            h_goal_predict = np.argmax(self.goal_probs)
+            print('self.goal_probs:')
+            print(self.goal_probs)
+            print('h_goal_predict:')
+            print(h_goal_predict)
             self.goal_idx = np.argmin(np.linalg.norm(self.possible_goals[[0,1,2]] - self.get_P(), axis=0))
-            self.goal = self.possible_goals[:,[self.goal_idx]]
 
+            idx = np.argpartition(np.linalg.norm(self.possible_goals[[0,1,2]] - self.get_P(), axis=0), 2)
+            print('idx:')
+            print(idx)
+            # select the goal that's closest while is not human's goal
+            if idx[0] == h_goal_predict:
+                self.goal_idx = idx[1]
+            else:
+                self.goal_idx = idx[0]
+
+
+            print('goal_idx:')
+            print(self.goal_idx)
+            self.goal = self.possible_goals[:,[self.goal_idx]]
+            print('goal:')
+            print(self.goal)
+
+            ## TODO: check if this step is only applied when the robot reaches its goal
             # set partner's possible goals to be the same set 
             self.partner.set_goals_from_partner(self.possible_goals)
     
