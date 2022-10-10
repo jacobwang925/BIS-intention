@@ -139,6 +139,7 @@ class SharedGoalsSCARA(SCARA):
             total_goals_achieved = self.partner.goal_achieved + self.goal_achieved
             self.possible_goals[:,self.goal_idx] = self.goals[:,total_goals_achieved+3]
 
+            ## TODO: add some rule based goal seclection process
             # compute closest goal
             self.goal_idx = np.argmin(np.linalg.norm(self.possible_goals[[0,1,2]] - self.get_P(), axis=0))
             self.goal = self.possible_goals[:,[self.goal_idx]]

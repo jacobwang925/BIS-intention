@@ -10,6 +10,7 @@ def simulate_interaction(horizon=200):
     dT = 1 / fps
 
     # goals are randomly initialized inside objects
+    ## TODO: use non-cooperative human and goal pursuing robot for safety probability
     robot = SharedGoalsSCARA(SublevelSafeSet(), dT)
     human = BayesianHumanBall(MobileAgent, dT)
     robot.set_partner_agent(human)
@@ -69,6 +70,9 @@ def create_dataset(n_trajectories=1):
     goal_reached = []
     goal_idx = []
 
+    ## TODO: add robot goal reached
+    ## TODO: add safety score
+
     for i in tqdm(range(n_trajectories)):
         xh_traj, xr_traj, goals, h_goal_reached, h_goal_idx = simulate_interaction(horizon=horizon)
         h_goal_idx = propogate_goal_reached(h_goal_reached, h_goal_idx)
@@ -98,5 +102,5 @@ def save_data(path="../data/simulated_interactions.npz", n_trajectories=10):
     np.savez(path, xh_traj=all_xh_traj, xr_traj=all_xr_traj, goals=all_goals, h_goal_reached=all_h_goal_reached, goal_reached=goal_reached, goal_idx=goal_idx)
 
 if __name__ == "__main__":
-    save_data("../data/simulated_interactions_train.npz", n_trajectories=200)
+    save_data("mfi_data/simulated_interactions_train.npz", n_trajectories=10)
     # save_data("../data/simulated_interactions_test.npz", n_trajectories=200)
