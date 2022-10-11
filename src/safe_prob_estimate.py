@@ -6,7 +6,7 @@ from models import SharedGoalsSCARA, BayesianHumanBall
 from utils.Record import Record
 
 
-def simulate_interaction(horizon=200):
+def simulate_interaction(horizon=200, h_init_state = [0, 0, 0, 0], r_init_state = [0, 0, 0, 0]):
     fps = 20
     dT = 1 / fps
 
@@ -14,10 +14,31 @@ def simulate_interaction(horizon=200):
     ## TODO: use non-cooperative human and goal pursuing robot for safety probability
     ## TODO: set initial state for human and robot (probably human's goal or other history-related info?)
 
-    robot = SharedGoalsSCARA(SublevelSafeSet(), dT)
-    human = BayesianHumanBall(MobileAgent, dT)
+    h_init_state = [0, 0, 1, 0, 0, 0]
+    r_init_state = [-2, -2, 0, 1, 0, 0]
+
+    # robot = SharedGoalsSCARA(SublevelSafeSet(), dT)
+    robot = SharedGoalsSCARA(MobileAgent, dT, init_state=r_init_state, use_intent_pred=True) # goal pursuing robot
+    human = BayesianHumanBall(MobileAgent, dT, init_state=h_init_state)
     robot.set_partner_agent(human)
     human.set_partner_agent(robot)
+
+    r_hist = np.zeros(robot.hist_len, 4)
+    h_hist = np.zeros(robot.hist_len, 4)
+
+    for i in range(robot.hist_len):
+        r_hist[i, :] = [r_init_state[0]-(robot.hist_len-i)*r_init_state[2]*dT, r_init_state[1]-(robot.hist_len-i)*r_init_state[3]*dT, r_init_state[2], r_init_state[3]]
+        h_hist[i, :] = [h_init_state[0]-(robot.hist_len-i)*h_init_state[2]*dT, h_init_state[1]-(robot.hist_len-i)*h_init_state[3]*dT, h_init_state[2], h_init_state[3]]
+
+        robot.intention_data["xh_hist"].append(h_hist[i, :])
+        if len(robot.intention_data["xh_hist"]) > robot.hist_len:
+            robot.intention_data["xh_hist"].popleft()
+        robot.intention_data["xr_hist"].append(r_hist[i, :])
+        if len(robot.intention_data["xr_hist"]) > robot.hist_len:
+            robot.intention_data["xr_hist"].popleft()
+        robot.intention_data["goals_hist"].append(robot.possible_goals[0:4, :]) ## TODO: need double-check
+        if len(robot.intention_data["goals_hist"]) > robot.hist_len:
+            robot.intention_data["goals_hist"].popleft()
 
     xh_traj = np.zeros((human.n, horizon))
     xr_traj = np.zeros((robot.n, horizon))
@@ -77,7 +98,7 @@ def create_dataset(n_trajectories=1):
     goal_reached = []
     goal_idx = []
 
-    ## TODO: add robot goal reached
+    ## TODO: add robot goal reached. Done for now. This is only required during the testing phase
     ## TODO: add safety score. Done
 
     all_collision_cnt = 0.0;
@@ -117,6 +138,9 @@ def save_data(path="../data/simulated_interactions.npz", n_trajectories=10):
 
     np.savez(path, xh_traj=all_xh_traj, xr_traj=all_xr_traj, goals=all_goals, h_goal_reached=all_h_goal_reached,
              goal_reached=goal_reached, goal_idx=goal_idx)
+
+    # TODO: save data using pickle, as in generate_data.py
+
 
 
 if __name__ == "__main__":
