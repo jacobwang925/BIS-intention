@@ -9,10 +9,15 @@ def simulate_interaction(horizon=200):
     fps = 20
     dT = 1 / fps
 
+    h_init_state = [0, 0, 1, 0, 0, 0]
+    r_init_state = [-2, -2, 0, 1, 0, 0]
+
     # goals are randomly initialized inside objects
     ## TODO: use non-cooperative human and goal pursuing robot for safety probability
-    robot = SharedGoalsSCARA(SublevelSafeSet(), dT)
-    human = BayesianHumanBall(MobileAgent, dT)
+    # robot = SharedGoalsSCARA(SublevelSafeSet(), dT, use_intent_pred=True)
+    robot = SharedGoalsSCARA(MobileAgent, dT, init_state=r_init_state, use_intent_pred=True)
+    # human = BayesianHumanBall(MobileAgent, dT)
+    human = BayesianHumanBall(MobileAgent, dT, init_state=h_init_state)
     robot.set_partner_agent(human)
     human.set_partner_agent(robot)
 

@@ -96,7 +96,9 @@ class SharedGoalsSCARA(SCARA):
         # if the intention data is not long enough, return
         if len(self.intention_data["xh_hist"]) < self.hist_len:
             return
-        
+
+        # print(self.intention_data["xh_hist"])
+
         # get the intention prediction
         xh_hist = np.hstack(self.intention_data["xh_hist"])
         xr_hist = np.hstack(self.intention_data["xr_hist"])

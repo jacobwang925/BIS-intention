@@ -1,7 +1,7 @@
 import numpy as np
 from tqdm import tqdm
 
-from agents import SublevelSafeSet, MobileAgent
+from agents import SublevelSafeSet, MobileAgent, GoalPursuing
 from models import SharedGoalsSCARA, BayesianHumanBall
 from utils.Record import Record
 
@@ -18,27 +18,40 @@ def simulate_interaction(horizon=200, h_init_state = [0, 0, 0, 0], r_init_state 
     r_init_state = [-2, -2, 0, 1, 0, 0]
 
     # robot = SharedGoalsSCARA(SublevelSafeSet(), dT)
-    robot = SharedGoalsSCARA(MobileAgent, dT, init_state=r_init_state, use_intent_pred=True) # goal pursuing robot
+    robot = SharedGoalsSCARA(GoalPursuing(), dT, init_state=r_init_state, use_intent_pred=True) # goal pursuing robot # calc_control_input() missing 1 required positional argument: 'max_u'
+    # robot = SharedGoalsSCARA(SublevelSafeSet(), dT, init_state=r_init_state, use_intent_pred=True)  # TODO: goal pursuing robot
     human = BayesianHumanBall(MobileAgent, dT, init_state=h_init_state)
     robot.set_partner_agent(human)
     human.set_partner_agent(robot)
 
-    r_hist = np.zeros(robot.hist_len, 4)
-    h_hist = np.zeros(robot.hist_len, 4)
+    # print(robot.hist_len) # int: 5
+    r_hist = np.zeros((robot.hist_len, 4))
+    h_hist = np.zeros((robot.hist_len, 4))
 
     for i in range(robot.hist_len):
-        r_hist[i, :] = [r_init_state[0]-(robot.hist_len-i)*r_init_state[2]*dT, r_init_state[1]-(robot.hist_len-i)*r_init_state[3]*dT, r_init_state[2], r_init_state[3]]
-        h_hist[i, :] = [h_init_state[0]-(robot.hist_len-i)*h_init_state[2]*dT, h_init_state[1]-(robot.hist_len-i)*h_init_state[3]*dT, h_init_state[2], h_init_state[3]]
+        r_hist[i, :] = [r_init_state[0]-(robot.hist_len-i-1)*r_init_state[2]*dT, r_init_state[1]-(robot.hist_len-i-1)*r_init_state[3]*dT, r_init_state[2], r_init_state[3]]
+        h_hist[i, :] = [h_init_state[0]-(robot.hist_len-i-1)*h_init_state[2]*dT, h_init_state[1]-(robot.hist_len-i-1)*h_init_state[3]*dT, h_init_state[2], h_init_state[3]]
 
-        robot.intention_data["xh_hist"].append(h_hist[i, :])
+        r_hist_mat = np.asmatrix(r_hist[i, :]).transpose()
+        h_hist_mat = np.asmatrix(h_hist[i, :]).transpose()
+
+        # all valid trajs
+        # print('h_hist[i, :] ')
+        # print(h_hist[i, :])
+        # print('r_hist[i, :]')
+        # print(r_hist[i, :])
+
+        robot.intention_data["xh_hist"].append(h_hist_mat)
         if len(robot.intention_data["xh_hist"]) > robot.hist_len:
             robot.intention_data["xh_hist"].popleft()
-        robot.intention_data["xr_hist"].append(r_hist[i, :])
+        robot.intention_data["xr_hist"].append(r_hist_mat)
         if len(robot.intention_data["xr_hist"]) > robot.hist_len:
             robot.intention_data["xr_hist"].popleft()
         robot.intention_data["goals_hist"].append(robot.possible_goals[0:4, :]) ## TODO: need double-check
         if len(robot.intention_data["goals_hist"]) > robot.hist_len:
             robot.intention_data["goals_hist"].popleft()
+
+    # print(robot.intention_data["goals_hist"])
 
     xh_traj = np.zeros((human.n, horizon))
     xr_traj = np.zeros((robot.n, horizon))
@@ -144,5 +157,5 @@ def save_data(path="../data/simulated_interactions.npz", n_trajectories=10):
 
 
 if __name__ == "__main__":
-    save_data("mfi_data/simulated_interactions_train.npz", n_trajectories=100)
+    save_data("mfi_data/simulated_interactions_train.npz", n_trajectories=10)
     # save_data("../data/simulated_interactions_test.npz", n_trajectories=200)
