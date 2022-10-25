@@ -1,9 +1,12 @@
 import numpy as np
 from tqdm import tqdm
+# from concurrent.futures import ProcessPoolExecutor, as_completed
 
 from agents import SublevelSafeSet, MobileAgent, GoalPursuing
 from models import SharedGoalsSCARA, BayesianHumanBall
 from utils.Record import Record
+
+# from multiprocessing import Pool
 
 
 def simulate_interaction(horizon=200, h_init_state = [0, 0, 0, 0], r_init_state = [0, 0, 0, 0]):
@@ -152,27 +155,56 @@ def get_safe_prob(n_trajectories=1):
 
     safe_prob = np.zeros([2,2,2,2])
 
-    init = []
+    inits = []
 
     for hx in range(2):
         for hy in range(2):
             for rx in range(2):
                 for ry in range(2):
-                    init = [init, np.array(hx, hy, rx, ry)]
+                    inits = [inits, np.array(hx, hy, rx, ry)]
 
+    pool = Pool()  # Create a multiprocessing Pool
+    Safeprob = SafeProb()
+    pool.map(Safeprob, inits)
 
-                    all_collision_cnt = 0.0
-
-                    for i in tqdm(range(n_trajectories)):
-                        xh_traj, xr_traj, goals, h_goal_reached, h_goal_idx, collision_cnt = simulate_interaction(
-                            horizon=horizon, h_init_state=[hx*0.5+1, hy*0.5+1, -1, 0], r_init_state=[rx*0.5, ry*0.5, 1, 1])
-                        # h_goal_idx = propogate_goal_reached(h_goal_reached, h_goal_idx)
-
-                        all_collision_cnt += collision_cnt
-
-                    safe_prob[hx,hy,rx,ry] = 1 - all_collision_cnt/n_trajectories
-
+                    # all_collision_cnt = 0.0
+                    #
+                    # for i in tqdm(range(n_trajectories)):
+                    #     xh_traj, xr_traj, goals, h_goal_reached, h_goal_idx, collision_cnt = simulate_interaction(
+                    #         horizon=horizon, h_init_state=[hx*0.5+1, hy*0.5+1, -1, 0], r_init_state=[rx*0.5, ry*0.5, 1, 1])
+                    #     # h_goal_idx = propogate_goal_reached(h_goal_reached, h_goal_idx)
+                    #
+                    #     all_collision_cnt += collision_cnt
+                    #
+                    # safe_prob[hx,hy,rx,ry] = 1 - all_collision_cnt/n_trajectories
+    safe_prob = Safeprob.safe_prob
     return safe_prob
+
+# def sample_traj(init=[0,0,0,0]):
+#     n_trajectories = 10
+#     horizon = 10
+#     all_collision_cnt = 0
+#     for i in tqdm(range(n_trajectories)):
+#         xh_traj, xr_traj, goals, h_goal_reached, h_goal_idx, collision_cnt = simulate_interaction(
+#             horizon=horizon, h_init_state=[init[0] * 0.5 + 1, init[1] * 0.5 + 1, -1, 0], r_init_state=[init[2] * 0.5, init[3] * 0.5, 1, 1])
+#         all_collision_cnt += collision_cnt
+#     safe_prob[init[0],init[1],init[2],init[3]] = 1 - all_collision_cnt/n_trajectories
+
+
+class SafeProb(object):
+    def __init__(self):
+        self.safe_prob = np.zeros([2,2,2,2])
+
+    def __call__(self, init=[0,0,0,0]):
+        n_trajectories = 10
+        horizon = 10
+        all_collision_cnt = 0
+        for i in tqdm(range(n_trajectories)):
+            xh_traj, xr_traj, goals, h_goal_reached, h_goal_idx, collision_cnt = simulate_interaction(
+                horizon=horizon, h_init_state=[init[0] * 0.5 + 1, init[1] * 0.5 + 1, -1, 0],
+                r_init_state=[init[2] * 0.5, init[3] * 0.5, 1, 1])
+            all_collision_cnt += collision_cnt
+        self.safe_prob[init[0], init[1], init[2], init[3]] = 1 - all_collision_cnt / n_trajectories
 
 
 def save_data(path="../data/simulated_interactions.npz", n_trajectories=10):
